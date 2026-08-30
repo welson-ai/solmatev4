@@ -1,0 +1,32 @@
+{
+  "name": "solmate-interface",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "test-rates": "tsx src/testRates.ts",
+    "test-routing": "tsx src/testRouting.ts",
+    "test-wallet": "tsx src/testWallet.ts",
+    "start": "node server.js",
+    "dev": "tsc && node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^26.1.2",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.23.4",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@aave/client": "^6.2.1",
+    "@aave/core-v3": "^1.19.3",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "viem": "^2.56.0",
+    "wagmi": "^3.7.6"
+  }
+}

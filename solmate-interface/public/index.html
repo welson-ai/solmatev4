@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solmate Butler - Yield Routing</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root{
+    --ink:#000000;
+    --ink-soft:#111111;
+    --parchment:#FFFFFF;
+    --parchment-dim:#F4F4F5;
+    --brass:#00C896;
+    --brass-dim:#00A878;
+    --moss:#00C896;
+    --ember:#EF4444;
+    --slate:#9CA3AF;
+    --slate-dim:#6B7280;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{height:100%;margin:0;}
+  body{
+    background:var(--ink);
+    color:var(--parchment);
+    font-family:'Inter',sans-serif;
+    display:flex;
+    justify-content:center;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .app{
+    width:100%;
+    max-width:1200px;
+    height:100vh;
+    display:flex;
+    flex-direction:column;
+    border-left:1px solid #1A1A1A;
+    border-right:1px solid #1A1A1A;
+  }
+
+  /* Header */
+  .header{
+    padding:20px 24px 16px;
+    border-bottom:1px solid #1A1A1A;
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+  .seal{
+    width:34px;height:34px;border-radius:50%;
+    border:1.5px solid var(--brass);
+    display:flex;align-items:center;justify-content:center;
+    position:relative;
+    flex-shrink:0;
+  }
+  .seal::after{
+    content:'';
+    position:absolute;
+    width:44px;height:44px;
+    border-radius:50%;
+    border:1px solid var(--brass);
+    opacity:0.35;
+    animation:pulse 2.6s ease-in-out infinite;
+  }
+  @keyframes pulse{
+    0%,100%{transform:scale(1);opacity:0.35;}
+    50%{transform:scale(1.12);opacity:0;}
+  }
+  .seal-mark{
+    font-family:'Inter',sans-serif;
+    font-size:15px;
+    color:var(--brass);
+  }
+  .seal-logo{
+    width:22px;height:22px;
+    object-fit:contain;
+    position:relative;
+    z-index:1;
+  }
+  .header-text h1{
+    font-family:'Inter',sans-serif;
+    font-weight:500;
+    font-size:18px;
+    margin:0;
+    letter-spacing:0.2px;
+  }
+  .header-text p{
+    margin:2px 0 0;
+    font-size:12px;
+    color:var(--slate);
+    font-family:'JetBrains Mono',monospace;
+  }
+  .status-dot{
+    width:6px;height:6px;border-radius:50%;
+    background:var(--moss);
+    display:inline-block;
+    margin-right:6px;
+    box-shadow:0 0 0 3px rgba(0,200,150,0.15);
+  }
+
+  .wallet-btn{
+    margin-left:auto;
+    flex-shrink:0;
+    font-family:'Inter',sans-serif;
+    font-size:13px;
+    font-weight:500;
+    letter-spacing:0.3px;
+    padding:9px 20px;
+    border-radius:999px;
+    border:1px solid var(--brass);
+    background:transparent;
+    color:var(--brass);
+    cursor:pointer;
+    transition:all 0.2s;
+    white-space:nowrap;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .wallet-btn:hover{
+    background:var(--brass);
+    color:#000000;
+    box-shadow:0 0 0 1px var(--brass), 0 0 16px rgba(0,200,150,0.25);
+  }
+  .wallet-btn.connected{
+    background:var(--brass);
+    color:#000000;
+    border-color:var(--brass);
+  }
+  .wallet-dot{
+    width:7px;height:7px;border-radius:50%;
+    background:#000000;
+    opacity:0.75;
+  }
+
+  /* Main content area with 3 panels */
+  .main-content{
+    flex:1;
+    display:flex;
+    overflow:hidden;
+  }
+
+  /* Left panel - Portfolio */
+  .left-panel{
+    width:280px;
+    border-right:1px solid #1A1A1A;
+    padding:20px;
+    overflow-y:auto;
+    background:var(--ink-soft);
+  }
+
+  /* Middle panel - Chat */
+  .middle-panel{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    min-width:0;
+  }
+
+  /* Right panel - Market Rates */
+  .right-panel{
+    width:320px;
+    border-left:1px solid #1A1A1A;
+    padding:20px;
+    overflow-y:auto;
+    background:var(--ink-soft);
+  }
+
+  .panel-title{
+    font-family:'Inter',sans-serif;
+    font-size:16px;
+    font-weight:500;
+    color:var(--parchment);
+    margin-bottom:16px;
+    padding-bottom:12px;
+    border-bottom:1px solid #1A1A1A;
+  }
+
+  /* Portfolio items */
+  .portfolio-item{
+    margin-bottom:20px;
+  }
+  .portfolio-label{
+    font-size:11px;
+    color:var(--slate-dim);
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+    margin-bottom:4px;
+  }
+  .portfolio-value{
+    font-size:24px;
+    font-weight:600;
+    color:var(--parchment);
+    font-family:'Inter',sans-serif;
+  }
+  .portfolio-sub{
+    font-size:12px;
+    color:var(--slate);
+    margin-top:4px;
+  }
+
+  /* Market rate cards */
+  .rate-card{
+    background:var(--ink);
+    border:1px solid #1A1A1A;
+    border-radius:8px;
+    padding:16px;
+    margin-bottom:12px;
+    transition:border-color 0.2s;
+  }
+  .rate-card:hover{
+    border-color:var(--brass-dim);
+  }
+  .rate-card.best{
+    border-color:var(--moss);
+    box-shadow:0 0 0 1px var(--moss);
+  }
+  .rate-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:12px;
+  }
+  .rate-protocol{
+    font-family:'Inter',sans-serif;
+    font-size:14px;
+    font-weight:500;
+    color:var(--parchment);
+  }
+  .rate-badge{
+    font-size:10px;
+    padding:2px 6px;
+    border-radius:4px;
+    background:var(--brass-dim);
+    color:var(--ink);
+    font-weight:500;
+  }
+  .rate-apy{
+    font-size:28px;
+    font-weight:600;
+    color:var(--parchment);
+    font-family:'Inter',sans-serif;
+    margin-bottom:4px;
+  }
+  .rate-apy.moss{color:var(--moss);}
+  .rate-tvl{
+    font-size:12px;
+    color:var(--slate);
+    margin-bottom:8px;
+  }
+  .rate-trend{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:12px;
+    font-family:'JetBrains Mono',monospace;
+  }
+  .trend-up{color:var(--moss);}
+  .trend-down{color:var(--ember);}
+  .trend-neutral{color:var(--slate);}
+  .trend-icon{
+    font-size:14px;
+  }
+
+  /* Strip */
+  .strip{
+    display:flex;
+    padding:14px 24px;
+    gap:24px;
+    border-bottom:1px solid #1A1A1A;
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    overflow-x:auto;
+  }
+  .strip-item{white-space:nowrap;}
+  .strip-label{color:var(--slate-dim);display:block;font-size:10px;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:3px;}
+  .strip-value{color:var(--parchment);font-size:14px;}
+  .strip-value.up{color:var(--moss);}
+
+  /* Chat area */
+  .chat{
+    flex:1;
+    overflow-y:auto;
+    padding:20px 24px;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+  .chat::-webkit-scrollbar{width:6px;}
+  .chat::-webkit-scrollbar-thumb{background:#262626;border-radius:3px;}
+
+  .msg{max-width:82%;line-height:1.5;font-size:14.5px;}
+  .msg.user{
+    align-self:flex-end;
+    background:var(--ink-soft);
+    color:var(--parchment);
+    padding:10px 14px;
+    border-radius:14px 14px 3px 14px;
+    font-family:'Inter',sans-serif;
+  }
+  .msg.butler{
+    align-self:flex-start;
+    background:var(--parchment);
+    color:var(--ink);
+    padding:12px 16px;
+    border-radius:3px 14px 14px 14px;
+    font-family:'Inter',sans-serif;
+    font-weight:400;
+  }
+
+  /* Ledger entry */
+  .ledger{
+    align-self:stretch;
+    max-width:100%;
+    border-left:2px solid var(--brass);
+    padding:10px 0 10px 16px;
+    margin:4px 0;
+  }
+  .ledger-meta{
+    font-family:'JetBrains Mono',monospace;
+    font-size:10.5px;
+    color:var(--brass);
+    letter-spacing:0.5px;
+    text-transform:uppercase;
+    display:flex;
+    justify-content:space-between;
+    padding-right:8px;
+    margin-bottom:6px;
+  }
+  .ledger-body{
+    font-family:'Inter',sans-serif;
+    font-size:14.5px;
+    color:var(--parchment);
+    margin-bottom:10px;
+  }
+  .ledger-rows{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12.5px;
+    display:flex;
+    flex-direction:column;
+    gap:5px;
+    padding-right:8px;
+  }
+  .ledger-row{display:flex;justify-content:space-between;color:var(--slate);}
+  .ledger-row b{color:var(--parchment);font-weight:500;}
+  .ledger-row .delta-up{color:var(--moss);}
+  .ledger-actions{display:flex;gap:8px;margin-top:12px;}
+  .btn{
+    font-family:'Inter',sans-serif;
+    font-size:12.5px;
+    font-weight:500;
+    padding:7px 14px;
+    border-radius:6px;
+    border:1px solid transparent;
+    cursor:pointer;
+  }
+  .btn-primary{background:var(--brass);color:var(--ink);}
+  .btn-ghost{background:transparent;color:var(--slate);border-color:#333333;}
+
+  .typing{
+    align-self:flex-start;
+    display:flex;
+    gap:4px;
+    padding:12px 16px;
+  }
+  .typing span{
+    width:5px;height:5px;border-radius:50%;
+    background:var(--slate-dim);
+    animation:blink 1.2s infinite;
+  }
+  .typing span:nth-child(2){animation-delay:0.2s;}
+  .typing span:nth-child(3){animation-delay:0.4s;}
+  @keyframes blink{0%,80%,100%{opacity:0.2;}40%{opacity:1;}}
+
+  /* Composer */
+  .composer{
+    padding:14px 20px 20px;
+    border-top:1px solid #1A1A1A;
+    display:flex;
+    gap:10px;
+  }
+  .composer input{
+    flex:1;
+    background:var(--ink-soft);
+    border:1px solid #262626;
+    border-radius:10px;
+    padding:12px 14px;
+    color:var(--parchment);
+    font-family:'Inter',sans-serif;
+    font-size:14px;
+    outline:none;
+  }
+  .composer input:focus{border-color:var(--brass);}
+  .composer input::placeholder{color:var(--slate-dim);}
+  .send{
+    background:var(--brass);
+    border:none;
+    border-radius:10px;
+    width:42px;
+    color:var(--ink);
+    cursor:pointer;
+    font-size:16px;
+  }
+  .send:active{transform:scale(0.96);}
+
+  @media (max-width:900px){
+    .left-panel{display:none;}
+    .right-panel{display:none;}
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <div class="header">
+    <div class="seal"><img src="logo.png" alt="Solmate" class="seal-logo" /></div>
+    <div class="header-text">
+      <h1>Solmate Butler</h1>
+      <p><span class="status-dot"></span>watching 2 markets · Avalanche</p>
+    </div>
+    <button class="wallet-btn" id="walletBtn">Connect Wallet</button>
+  </div>
+
+  <div class="main-content">
+    <!-- Left Panel - Portfolio -->
+    <div class="left-panel">
+      <div class="panel-title">Your Portfolio</div>
+      
+      <div class="portfolio-item">
+        <div class="portfolio-label">Deployed</div>
+        <div class="portfolio-value" id="deployed">Loading...</div>
+        <div class="portfolio-sub">USDC</div>
+      </div>
+      
+      <div class="portfolio-item">
+        <div class="portfolio-label">Current Position</div>
+        <div class="portfolio-value" id="currentPosition">Loading...</div>
+        <div class="portfolio-sub" id="currentApy">Loading...</div>
+      </div>
+      
+      <div class="portfolio-item">
+        <div class="portfolio-label">Risk Tier</div>
+        <div class="portfolio-value" style="font-size:18px;">Moderate</div>
+        <div class="portfolio-sub">Conservative yield strategy</div>
+      </div>
+      
+      <div class="portfolio-item">
+        <div class="portfolio-label">Last Update</div>
+        <div class="portfolio-value" id="lastUpdate" style="font-size:16px;">--:--</div>
+        <div class="portfolio-sub">Real-time rates</div>
+      </div>
+    </div>
+
+    <!-- Middle Panel - Chat -->
+    <div class="middle-panel">
+      <div class="strip">
+        <div class="strip-item"><span class="strip-label">Net APY</span><span class="strip-value up" id="netApy">Loading...</span></div>
+        <div class="strip-item"><span class="strip-label">Best Available</span><span class="strip-value" id="bestApy">Loading...</span></div>
+        <div class="strip-item"><span class="strip-label">Status</span><span class="strip-value">Monitoring</span></div>
+      </div>
+
+      <div class="chat" id="chat">
+        <div class="msg butler">Good evening. I'm monitoring Aave V3 and BENQI lending markets on Avalanche, fetching live rates to optimize your yield.</div>
+        
+        <div class="typing" id="typingIndicator" style="display:none;"><span></span><span></span><span></span></div>
+      </div>
+
+      <div class="composer">
+        <input type="text" id="userInput" placeholder="Ask the Butler anything…">
+        <button class="send" id="sendBtn">↑</button>
+      </div>
+    </div>
+
+    <!-- Right Panel - Market Rates -->
+    <div class="right-panel">
+      <div class="panel-title">Market Rates</div>
+      <div id="ratesContainer">
+        <div style="color:var(--slate);font-size:12px;">Loading rates...</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const chat = document.getElementById('chat');
+const userInput = document.getElementById('userInput');
+const sendBtn = document.getElementById('sendBtn');
+const typingIndicator = document.getElementById('typingIndicator');
+const walletBtn = document.getElementById('walletBtn');
+
+let walletAddress = null;
+
+async function connectWallet() {
+  const provider = window.avalanche || window.ethereum;
+  if (!provider) {
+    addMessage('butler', "I couldn't find a wallet. Install the Core Wallet for Avalanche (or MetaMask with the Avalanche C-Chain network) to connect.");
+    return;
+  }
+  try {
+    const accounts = await provider.request({ method: 'eth_requestAccounts' });
+    walletAddress = accounts[0];
+    const short = `${walletAddress.slice(0, 6)}…${walletAddress.slice(-4)}`;
+    walletBtn.innerHTML = '<span class="wallet-dot"></span>' + short;
+    walletBtn.classList.add('connected');
+    walletBtn.title = walletAddress;
+    addMessage('butler', `Wallet connected: ${walletAddress}. I can now reference your on-chain position on Avalanche.`);
+  } catch (err) {
+    console.error('Wallet connection failed:', err);
+    addMessage('butler', 'Wallet connection was cancelled or failed. Try again when you\u2019re ready.');
+  }
+}
+walletBtn.addEventListener('click', connectWallet);
+
+// User state
+let userPosition = {
+  protocol: 'aave',
+  amount: 1000 // Default 1000 USDC
+};
+
+// Rate history for trend tracking
+let rateHistory = {
+  aave: { apy: 0, timestamp: 0 },
+  benqi: { apy: 0, timestamp: 0 }
+};
+
+// Initialize
+async function init() {
+  await fetchRates();
+  addMessage('butler', "I'm ready to help optimize your yield. I can check current rates, suggest rebalancing opportunities, or explain market conditions. What would you like to know?");
+  
+  // Auto-refresh rates every 30 seconds
+  setInterval(fetchRates, 30000);
+}
+
+// Fetch current rates
+async function fetchRates() {
+  try {
+    const response = await fetch('/api/rates');
+    const rates = await response.json();
+    
+    // Update rate history for trends
+    const now = Date.now();
+    rates.forEach(rate => {
+      const key = rate.protocol;
+      if (rateHistory[key] && now - rateHistory[key].timestamp > 1000) {
+        // Only update if it's been at least 1 second (avoid overwriting too quickly)
+        rateHistory[key] = { apy: rate.apy, timestamp: now };
+      } else if (!rateHistory[key]) {
+        rateHistory[key] = { apy: rate.apy, timestamp: now };
+      }
+    });
+    
+    // Update left panel portfolio
+    updatePortfolioPanel(rates);
+    
+    // Update right panel market rates
+    updateMarketRatesPanel(rates);
+    
+    // Update middle strip
+    updateStrip(rates);
+    
+    return rates;
+  } catch (error) {
+    console.error('Error fetching rates:', error);
+    return [];
+  }
+}
+
+// Update left portfolio panel
+function updatePortfolioPanel(rates) {
+  document.getElementById('deployed').textContent = `${userPosition.amount.toFixed(2)}`;
+  
+  const protocolName = userPosition.protocol === 'aave' ? 'Aave V3' : 'BENQI';
+  document.getElementById('currentPosition').textContent = protocolName;
+  
+  const currentRate = rates.find(r => r.protocol === userPosition.protocol);
+  if (currentRate) {
+    document.getElementById('currentApy').textContent = `${currentRate.apy.toFixed(2)}% APY`;
+  }
+  
+  document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+}
+
+// Update right panel market rates
+function updateMarketRatesPanel(rates) {
+  const container = document.getElementById('ratesContainer');
+  
+  if (rates.length === 0) {
+    container.innerHTML = '<div style="color:var(--slate);font-size:12px;">Unable to fetch rates</div>';
+    return;
+  }
+  
+  // Find best rate
+  const bestRate = rates.reduce((best, current) => current.apy > best.apy ? current : best);
+  
+  container.innerHTML = rates.map(rate => {
+    const protocolName = rate.protocol === 'aave' ? 'Aave V3' : 'BENQI';
+    const isBest = rate.protocol === bestRate.protocol;
+    const isCurrent = rate.protocol === userPosition.protocol;
+    
+    // Calculate trend
+    const trend = calculateTrend(rate.protocol, rate.apy);
+    
+    return `
+      <div class="rate-card ${isBest ? 'best' : ''}">
+        <div class="rate-header">
+          <span class="rate-protocol">${protocolName}</span>
+          ${isCurrent ? '<span class="rate-badge">Current</span>' : ''}
+          ${isBest && !isCurrent ? '<span class="rate-badge" style="background:var(--moss);">Best</span>' : ''}
+        </div>
+        <div class="rate-apy ${isBest ? 'moss' : ''}">${rate.apy.toFixed(2)}%</div>
+        <div class="rate-tvl">$${formatTVL(rate.tvl)} TVL</div>
+        <div class="rate-trend ${trend.class}">
+          <span class="trend-icon">${trend.icon}</span>
+          <span>${trend.text}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Calculate trend based on rate history
+function calculateTrend(protocol, currentApy) {
+  const history = rateHistory[protocol];
+  if (!history || history.timestamp === 0) {
+    return { class: 'trend-neutral', icon: '—', text: 'No data' };
+  }
+  
+  const previousApy = history.apy;
+  const change = currentApy - previousApy;
+  
+  if (Math.abs(change) < 0.01) {
+    return { class: 'trend-neutral', icon: '—', text: 'Stable' };
+  } else if (change > 0) {
+    return { class: 'trend-up', icon: '↑', text: `+${change.toFixed(2)}%` };
+  } else {
+    return { class: 'trend-down', icon: '↓', text: `${change.toFixed(2)}%` };
+  }
+}
+
+// Format TVL for display
+function formatTVL(tvl) {
+  if (tvl >= 1000000) {
+    return `$${(tvl / 1000000).toFixed(1)}M`;
+  } else if (tvl >= 1000) {
+    return `$${(tvl / 1000).toFixed(1)}K`;
+  }
+  return `$${tvl.toFixed(0)}`;
+}
+
+// Update middle strip
+function updateStrip(rates) {
+  const currentRate = rates.find(r => r.protocol === userPosition.protocol);
+  if (currentRate) {
+    document.getElementById('netApy').textContent = `${currentRate.apy.toFixed(2)}%`;
+  }
+  
+  const bestRate = rates.reduce((best, current) => current.apy > best.apy ? current : best);
+  if (bestRate) {
+    document.getElementById('bestApy').textContent = `${bestRate.apy.toFixed(2)}%`;
+  }
+}
+
+// Add message to chat
+function addMessage(type, content) {
+  const msgDiv = document.createElement('div');
+  msgDiv.className = `msg ${type}`;
+  msgDiv.textContent = content;
+  
+  // Insert before typing indicator
+  chat.insertBefore(msgDiv, typingIndicator);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+// Add ledger entry
+function addLedger(data) {
+  const ledgerDiv = document.createElement('div');
+  ledgerDiv.className = 'ledger';
+  
+  const metaDiv = document.createElement('div');
+  metaDiv.className = 'ledger-meta';
+  metaDiv.innerHTML = `<span>${data.type}</span><span>${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>`;
+  
+  const bodyDiv = document.createElement('div');
+  bodyDiv.className = 'ledger-body';
+  bodyDiv.textContent = data.message;
+  
+  const rowsDiv = document.createElement('div');
+  rowsDiv.className = 'ledger-rows';
+  
+  if (data.rows) {
+    data.rows.forEach(row => {
+      const rowDiv = document.createElement('div');
+      rowDiv.className = 'ledger-row';
+      rowDiv.innerHTML = `<span>${row.label}</span><b class="${row.valueClass || ''}">${row.value}</b>`;
+      rowsDiv.appendChild(rowDiv);
+    });
+  }
+  
+  if (data.actions) {
+    const actionsDiv = document.createElement('div');
+    actionsDiv.className = 'ledger-actions';
+    
+    data.actions.forEach(action => {
+      const btn = document.createElement('button');
+      btn.className = `btn ${action.primary ? 'btn-primary' : 'btn-ghost'}`;
+      btn.textContent = action.label;
+      btn.onclick = action.handler;
+      actionsDiv.appendChild(btn);
+    });
+    
+    ledgerDiv.appendChild(actionsDiv);
+  }
+  
+  ledgerDiv.appendChild(metaDiv);
+  ledgerDiv.appendChild(bodyDiv);
+  ledgerDiv.appendChild(rowsDiv);
+  
+  chat.insertBefore(ledgerDiv, typingIndicator);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+// Show typing indicator
+function showTyping() {
+  typingIndicator.style.display = 'flex';
+  chat.scrollTop = chat.scrollHeight;
+}
+
+// Hide typing indicator
+function hideTyping() {
+  typingIndicator.style.display = 'none';
+}
+
+// Process user message
+async function processMessage(message) {
+  showTyping();
+  
+  const lowerMessage = message.toLowerCase();
+  
+  // Simulate processing delay
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
+  if (lowerMessage.includes('rate') || lowerMessage.includes('apy') || lowerMessage.includes('yield')) {
+    const rates = await fetchRates();
+    hideTyping();
+    
+    if (rates.length === 0) {
+      addMessage('butler', "I'm having trouble fetching current rates. Please try again in a moment.");
+      return;
+    }
+    
+    addLedger({
+      type: 'Current Rates',
+      message: 'Here are the current supply rates across markets:',
+      rows: rates.map(r => ({
+        label: r.protocol === 'aave' ? 'Aave V3' : 'BENQI',
+        value: `${r.apy.toFixed(2)}% APY`,
+        valueClass: r.protocol === userPosition.protocol ? '' : 'delta-up'
+      }))
+    });
+    
+    addMessage('butler', "I'm continuously monitoring these rates. Check the right panel for real-time trends. Would you like me to analyze if moving your position would be beneficial?");
+    
+  } else if (lowerMessage.includes('rebalance') || lowerMessage.includes('move') || lowerMessage.includes('switch')) {
+    const response = await fetch('/api/rebalance', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        currentPosition: userPosition,
+        riskTier: 'moderate'
+      })
+    });
+    
+    const data = await response.json();
+    hideTyping();
+    
+    if (data.proposal) {
+      const monthlyGain = data.proposal.estMonthlyGain.toFixed(2);
+      
+      addLedger({
+        type: 'Rebalance Proposal',
+        message: `Moving your position would increase your yield by ${data.proposal.apyDelta.toFixed(2)}%.`,
+        rows: [
+          { label: 'From', value: data.proposal.fromProtocol === 'aave' ? 'Aave V3' : 'BENQI' },
+          { label: 'To', value: data.proposal.toProtocol === 'aave' ? 'Aave V3' : 'BENQI', valueClass: 'delta-up' },
+          { label: 'APY Delta', value: `+${data.proposal.apyDelta.toFixed(2)}%`, valueClass: 'delta-up' },
+          { label: 'Est. monthly gain', value: `+$${monthlyGain}`, valueClass: 'delta-up' },
+          { label: 'Est. gas cost', value: `$${data.proposal.estGasCost.toFixed(2)}` }
+        ],
+        actions: [
+          { label: 'Execute', primary: true, handler: () => executeRebalance(data.proposal) },
+          { label: 'Not now', primary: false, handler: () => addMessage('butler', 'Understood. I\'ll continue monitoring and let you know if conditions change.') }
+        ]
+      });
+    } else {
+      addMessage('butler', "Your current position is already optimal - no rebalancing needed at this time. I'll continue monitoring and alert you if conditions change.");
+    }
+    
+  } else if (lowerMessage.includes('position') || lowerMessage.includes('where')) {
+    hideTyping();
+    const rates = await fetchRates();
+    const currentRate = rates.find(r => r.protocol === userPosition.protocol);
+    addMessage('butler', `You currently have ${userPosition.amount} USDC deployed in ${userPosition.protocol === 'aave' ? 'Aave V3' : 'BENQI'} earning ${currentRate?.apy.toFixed(2) || 0}% APY.`);
+    
+  } else if (lowerMessage.includes('help') || lowerMessage.includes('what can you')) {
+    hideTyping();
+    addMessage('butler', "I can help you with: checking current rates, analyzing rebalancing opportunities, explaining your current position, and monitoring market conditions. The right panel shows live rates with trend indicators. Just ask!");
+    
+  } else {
+    hideTyping();
+    addMessage('butler', "I can help you optimize your yield strategy. Try asking about current rates, rebalancing opportunities, or your position details.");
+  }
+}
+
+// Execute rebalance (simulated)
+function executeRebalance(proposal) {
+  addMessage('butler', 'Executing rebalance...');
+  
+  setTimeout(() => {
+    userPosition.protocol = proposal.toProtocol;
+    fetchRates();
+    
+    addLedger({
+      type: 'Executed',
+      message: 'Successfully moved your position.',
+      rows: [
+        { label: 'New position', value: proposal.toProtocol === 'aave' ? 'Aave V3' : 'BENQI' },
+        { label: 'Status', value: '✓ Complete' }
+      ]
+    });
+    
+    addMessage('butler', 'Done. Your funds are now earning at the new rate. I\'ll continue monitoring for further optimization opportunities.');
+  }, 2000);
+}
+
+// Event listeners
+sendBtn.addEventListener('click', () => {
+  const message = userInput.value.trim();
+  if (message) {
+    addMessage('user', message);
+    userInput.value = '';
+    processMessage(message);
+  }
+});
+
+userInput.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    sendBtn.click();
+  }
+});
+
+// Start
+init();
+</script>
+
+</body>
+</html>
