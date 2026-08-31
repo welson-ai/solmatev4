@@ -88,6 +88,11 @@ solmate/                              # Monorepo root — landing page + the But
 ├── public/
 │   └── assets/                       # logo.png, cm.png, yield.png, image.jpg, hero-video.mp4
 ├── scripts/                          # Dev tooling (auto-commits.sh)
+├── contracts/                        # Avalanche C-Chain contracts (Solidity, Foundry)
+│   ├── src/
+│   │   ├── Mandate.sol               # Revocable envelope: venues, caps, kill switch
+│   │   └── SolmateAccount.sol        # Thin per-user account; emits rebalance receipts
+│   └── foundry.toml
 ├── solmate-interface/                # The Butler — the agent UI + backend
 │   ├── server.js                     # Express API: GET /api/rates, POST /api/rebalance
 │   ├── public/
@@ -173,7 +178,7 @@ WITHDRAWAL  adapter exit → USDC → Pretium off-ramp → M-Pesa
 | Wallet | Core (Avalanche-native), MetaMask fallback (C-Chain) via injected EIP-1193 |
 | Agent / AI | Gemini APIs (planner + explainer), LangChain or CrewAI orchestration |
 | Fiat rail | Pretium Payment API (on-ramp, pay/disburse, webhooks, FX, partner fee) |
-| Blockchain | Avalanche C-Chain (EVM), thin Solmate account / safe-style module, session keys |
+| Blockchain | Avalanche C-Chain (EVM), Solidity 0.8.24 (Foundry), thin Solmate account / safe-style module, session keys |
 | Identity | W3C DIDs + Verifiable Credentials (Know Your Agent mandate shape) |
 | DeFi adapters | BENQI, sAVAX, Aave, LFJ, Pharaoh, Blackhole, Yield Yak, Avant |
 | Oracles | Chainlink-class / venue-native price and rate feeds |
