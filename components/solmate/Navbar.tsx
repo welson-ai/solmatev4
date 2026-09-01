@@ -26,7 +26,7 @@ export function Navbar() {
           <a href="#protocols" className="text-white hover:text-solmate-green transition text-sm font-medium">
             PROTOCOLS
           </a>
-          <a href="http://localhost:3001" className="text-white hover:text-solmate-green transition text-sm font-medium">
+          <a href="/agent/agent.html" className="text-white hover:text-solmate-green transition text-sm font-medium">
             AGENT
           </a>
           <a href="#docs" className="text-white hover:text-solmate-green transition text-sm font-medium">

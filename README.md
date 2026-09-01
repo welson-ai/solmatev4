@@ -87,24 +87,23 @@ solmate/                              # Monorepo root — landing page + the But
 ├── styles/
 ├── public/
 │   └── assets/                       # logo.png, cm.png, yield.png, image.jpg, hero-video.mp4
+├── app/
+│   ├── page.tsx / layout.tsx / globals.css
+│   ├── api/rates/route.ts             # Butler API: GET live Aave/BENQI APY
+│   └── api/rebalance/route.ts         # Butler API: POST rebalance proposal
 ├── scripts/                          # Dev tooling (auto-commits.sh)
 ├── contracts/                        # Avalanche C-Chain contracts (Solidity, Foundry)
 │   ├── src/
 │   │   ├── Mandate.sol               # Revocable envelope: venues, caps, kill switch
 │   │   └── SolmateAccount.sol        # Thin per-user account; emits rebalance receipts
 │   └── foundry.toml
-├── solmate-interface/                # The Butler — the agent UI + backend
-│   ├── server.js                     # Express API: GET /api/rates, POST /api/rebalance
-│   ├── public/
-│   │   ├── index.html                # Butler UI (dark/green brand palette, wallet connect)
-│   │   └── logo.png
-│   ├── src/
-│   │   ├── butlerBackend.ts          # Rate fetching (Aave/BENQI) + rebalance routing
-│   │   ├── testRates.ts / testRouting.ts / testWallet.ts
-│   │   └── index.ts
-│   ├── dist/                         # Compiled backend (tsc output, committed)
-│   ├── package.json
-│   └── tsconfig.json
+├── public/
+│   └── agent/                        # Butler UI (static) served at /agent/agent.html
+├── solmate-interface/                # Shared Butler backend source (used by the API routes)
+│   └── src/
+│       ├── butlerBackend.ts          # Rate fetching (Aave/BENQI) + rebalance routing
+│       ├── testRates.ts / testRouting.ts / testWallet.ts
+│       └── index.ts
 ├── package.json                      # Next.js app (pnpm)
 └── netlify.toml
 ```
@@ -214,20 +213,24 @@ pnpm lint             # lint the workspace
 
 ### 2. The Butler (agent interface)
 
+The Butler is now served by the same Next.js app — no separate server, and no `localhost` dependency, so it works wherever the site is deployed.
+
+- **UI**: `/agent/agent.html` (static, served from `public/agent/`)
+- **API**: served by Next.js API routes:
+  - `GET /api/rates` → live Aave/BENQI supply APY from Avalanche C-Chain (`fetchRates`)
+  - `POST /api/rebalance` → rebalance proposal from a current position/risk tier (`decideRebalance`)
+- The nav **AGENT** link and the Butler's in-app fetches are same-origin, so they resolve on any host.
+
+Run everything from the root with the dev server:
+
 ```bash
-cd solmate-interface
-npm install           # install dependencies (viem, wagmi, express, cors, tsx)
-npm run build         # compile TypeScript → dist/ (tsc)
-npm start             # start Express server → http://localhost:3001
+pnpm dev
+# http://localhost:3000/                → landing
+# http://localhost:3000/agent/agent.html → the Butler
+# http://localhost:3000/api/rates        → live rates (JSON)
 ```
 
-Development with auto-compile-then-run:
-
-```bash
-npm run dev           # tsc && node server.js
-```
-
-Utility scripts:
+The shared backend logic lives in `solmate-interface/src/butlerBackend.ts` (viem + Avalanche RPC). The old standalone Express server (`solmate-interface/server.js`, ex-port 3001) is retired. Utility scripts (still run from `solmate-interface/`):
 
 ```bash
 npm run test-rates    # fetch live Aave/BENQI rates
@@ -235,7 +238,7 @@ npm run test-routing  # run rebalance routing decisions
 npm run test-wallet   # wallet / viem smoke tests
 ```
 
-> Ports: the landing page serves on **3000**, the Butler on **3001**. The nav's AGENT link targets `localhost:3001`. Add your Pretium API keys, Gemini API key, and signing material to environment variables before wiring live rails.
+> Add your Pretium API keys, Gemini API key, and signing material to environment variables before wiring live rails.
 
 ## License
 
